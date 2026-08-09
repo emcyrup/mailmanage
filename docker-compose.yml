@@ -1,6 +1,9 @@
 services:
   mailmanage:
-    build: .
+    # GitHub Actions が公開するビルド済みイメージを使う。
+    # ソースからビルドする場合は image をコメントアウトして build を有効化。
+    image: ghcr.io/emcyrup/mailmanage:latest
+    # build: .
     ports:
       - "3000:3000"
     environment:

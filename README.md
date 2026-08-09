@@ -62,10 +62,12 @@ npm start
 
 ### Render(いちばん簡単)
 
-リポジトリに `render.yaml` を同梱しています。
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/emcyrup/mailmanage)
 
-1. https://render.com にサインアップし、「New → Blueprint」でこのリポジトリを選択
-2. 環境変数 `MAILMANAGE_INVITE_CODE` に招待コードを設定
+上のボタンを押すと Render のデプロイ画面が開きます(`render.yaml` を自動で読み込みます)。
+
+1. Render にサインアップ(GitHub アカウントでログイン可)
+2. 環境変数 `MAILMANAGE_INVITE_CODE` に招待コードを設定して「Apply」
 3. デプロイ完了後、発行された `https://〜.onrender.com` にアクセスして最初のユーザーを登録
 
 ### Railway
@@ -77,12 +79,16 @@ npm start
 
 ### VPS + Docker
 
+ビルド済みイメージが GitHub Container Registry に自動公開されています(`.github/workflows/docker.yml`)。VPS ではビルド不要で pull するだけです:
+
 ```bash
-git clone <このリポジトリ>
+git clone https://github.com/emcyrup/mailmanage.git
 cd mailmanage
 # docker-compose.yml の MAILMANAGE_INVITE_CODE / MAILMANAGE_SECRET を変更してから
-docker compose up -d --build
+docker compose up -d
 ```
+
+ソースからビルドしたい場合は `docker compose up -d --build` としてください。イメージ更新時は `docker compose pull && docker compose up -d` で反映できます。
 
 HTTPS 化は Caddy を前段に置くのが簡単です:
 
