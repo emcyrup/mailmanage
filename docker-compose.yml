@@ -1,0 +1,15 @@
+services:
+  mailmanage:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      # 必ず自分の値に変更すること
+      MAILMANAGE_PASSWORD: "change-me-login-password"
+      MAILMANAGE_SECRET: "change-me-long-random-string"
+    volumes:
+      - mailmanage-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  mailmanage-data:

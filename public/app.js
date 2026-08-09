@@ -33,6 +33,16 @@ const form = $('#add-form');
 
 let refreshTimer = null;
 
+// 401ならログインページへ飛ばす fetch ラッパー
+async function api(url, options) {
+  const res = await fetch(url, options);
+  if (res.status === 401) {
+    location.replace('/login.html');
+    throw new Error('unauthorized');
+  }
+  return res;
+}
+
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -83,7 +93,7 @@ function renderResults(results) {
     btn.addEventListener('click', async () => {
       const id = btn.closest('.card').dataset.id;
       if (!confirm('このアカウントを削除しますか?')) return;
-      await fetch(`/api/accounts/${id}`, { method: 'DELETE' });
+      await api(`/api/accounts/${id}`, { method: 'DELETE' });
       refresh();
     });
   });
@@ -137,13 +147,13 @@ function renderCard(r) {
 }
 
 async function refresh() {
-  const accounts = await (await fetch('/api/accounts')).json();
+  const accounts = await (await api('/api/accounts')).json();
   renderLoading(accounts);
   if (accounts.length === 0) {
     cardsEl.innerHTML = '';
     return;
   }
-  const results = await (await fetch('/api/status')).json();
+  const results = await (await api('/api/status')).json();
   renderResults(results);
 }
 
@@ -172,7 +182,7 @@ $('#cancel-btn').addEventListener('click', () => dialog.close());
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(form).entries());
-  const res = await fetch('/api/accounts', {
+  const res = await api('/api/accounts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -200,4 +210,23 @@ $('#auto-refresh').addEventListener('change', (e) => {
   }
 });
 
-refresh();
+// ---- 認証 ----
+
+const logoutBtn = $('#logout-btn');
+
+logoutBtn.addEventListener('click', async () => {
+  await fetch('/api/logout', { method: 'POST' });
+  location.replace('/login.html');
+});
+
+fetch('/api/auth')
+  .then((r) => r.json())
+  .then(({ enabled, authenticated }) => {
+    if (enabled && !authenticated) {
+      location.replace('/login.html');
+      return;
+    }
+    if (enabled) logoutBtn.classList.remove('hidden');
+    refresh();
+  })
+  .catch(() => refresh());

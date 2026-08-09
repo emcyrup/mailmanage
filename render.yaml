@@ -1,0 +1,18 @@
+# Render (https://render.com) 用の Blueprint。
+# ダッシュボードで MAILMANAGE_PASSWORD を必ず設定すること。
+services:
+  - type: web
+    name: mailmanage
+    runtime: node
+    plan: starter # ディスク永続化には有料プランが必要
+    buildCommand: npm ci
+    startCommand: node server.js
+    envVars:
+      - key: MAILMANAGE_PASSWORD
+        sync: false # ダッシュボードで手動設定
+      - key: MAILMANAGE_SECRET
+        generateValue: true
+    disk:
+      name: mailmanage-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
