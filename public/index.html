@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>mailmanage — 受信箱ダッシュボード</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>📬 mailmanage</h1>
+    <div class="topbar-actions">
+      <label class="auto-refresh">
+        <input type="checkbox" id="auto-refresh" />
+        自動更新(1分ごと)
+      </label>
+      <button id="refresh-btn" class="btn">🔄 更新</button>
+      <button id="add-btn" class="btn btn-primary">＋ アカウント追加</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="summary" class="summary hidden"></div>
+    <div id="cards" class="cards"></div>
+    <div id="empty" class="empty hidden">
+      <p>アカウントがまだ登録されていません。</p>
+      <p>「＋ アカウント追加」から、確認したいメールアドレスの IMAP 情報を登録してください。</p>
+    </div>
+  </main>
+
+  <!-- アカウント追加ダイアログ -->
+  <dialog id="add-dialog">
+    <form id="add-form" method="dialog">
+      <h2>アカウント追加</h2>
+
+      <label>プロバイダ
+        <select id="preset">
+          <option value="">カスタム</option>
+          <option value="gmail" selected>Gmail</option>
+          <option value="outlook">Outlook / Hotmail</option>
+          <option value="yahoo-jp">Yahoo!メール (日本)</option>
+          <option value="icloud">iCloud</option>
+        </select>
+      </label>
+
+      <label>表示名(任意)
+        <input type="text" name="label" placeholder="仕事用など" />
+      </label>
+
+      <label>メールアドレス *
+        <input type="email" name="email" required placeholder="you@example.com" />
+      </label>
+
+      <label>IMAPサーバー *
+        <input type="text" name="host" required placeholder="imap.example.com" />
+      </label>
+
+      <label>ポート
+        <input type="number" name="port" value="993" />
+      </label>
+
+      <label>ユーザー名(空欄ならメールアドレスを使用)
+        <input type="text" name="user" />
+      </label>
+
+      <label>パスワード *
+        <input type="password" name="password" required />
+      </label>
+
+      <p class="hint" id="preset-hint"></p>
+
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="cancel-btn">キャンセル</button>
+        <button type="submit" class="btn btn-primary">追加</button>
+      </div>
+      <p class="error hidden" id="add-error"></p>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
