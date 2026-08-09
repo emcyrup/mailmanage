@@ -10,6 +10,10 @@ services:
       # 必ず自分の値に変更すること
       MAILMANAGE_INVITE_CODE: "change-me-invite-code"
       MAILMANAGE_SECRET: "change-me-long-random-string"
+      # Outlook 連携(Microsoft OAuth)を使う場合のみ設定
+      # MS_CLIENT_ID: ""
+      # MS_CLIENT_SECRET: ""
+      # APP_BASE_URL: "https://mail.example.com"
     volumes:
       - mailmanage-data:/app/data
     restart: unless-stopped

@@ -13,6 +13,13 @@ services:
         sync: false # ダッシュボードで手動設定
       - key: MAILMANAGE_SECRET
         generateValue: true
+      # Outlook 連携(Microsoft OAuth)を使う場合のみ設定
+      - key: MS_CLIENT_ID
+        sync: false
+      - key: MS_CLIENT_SECRET
+        sync: false
+      - key: APP_BASE_URL
+        sync: false # 例: https://mailmanage.onrender.com
     disk:
       name: mailmanage-data
       mountPath: /opt/render/project/src/data

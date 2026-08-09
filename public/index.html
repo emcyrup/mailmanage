@@ -22,6 +22,7 @@
   </header>
 
   <main>
+    <div id="notice" class="notice hidden"></div>
     <div id="summary" class="summary hidden"></div>
     <div id="cards" class="cards"></div>
     <div id="empty" class="empty hidden">
@@ -35,6 +36,11 @@
     <form id="add-form" method="dialog">
       <h2>アカウント追加</h2>
 
+      <div id="ms-oauth-box" class="oauth-box hidden">
+        <p>Outlook / Hotmail は Microsoft の仕様変更によりパスワードでは接続できません。下のボタンから連携してください。</p>
+        <a href="/api/oauth/microsoft/start" class="btn btn-block">🔗 Microsoftアカウントで接続</a>
+      </div>
+
       <label>プロバイダ
         <select id="preset">
           <option value="">カスタム</option>
@@ -45,35 +51,37 @@
         </select>
       </label>
 
-      <label>表示名(任意)
-        <input type="text" name="label" placeholder="仕事用など" />
-      </label>
+      <div id="password-fields">
+        <label>表示名(任意)
+          <input type="text" name="label" placeholder="仕事用など" />
+        </label>
 
-      <label>メールアドレス *
-        <input type="email" name="email" required placeholder="you@example.com" />
-      </label>
+        <label>メールアドレス *
+          <input type="email" name="email" required placeholder="you@example.com" />
+        </label>
 
-      <label>IMAPサーバー *
-        <input type="text" name="host" required placeholder="imap.example.com" />
-      </label>
+        <label>IMAPサーバー *
+          <input type="text" name="host" required placeholder="imap.example.com" />
+        </label>
 
-      <label>ポート
-        <input type="number" name="port" value="993" />
-      </label>
+        <label>ポート
+          <input type="number" name="port" value="993" />
+        </label>
 
-      <label>ユーザー名(空欄ならメールアドレスを使用)
-        <input type="text" name="user" />
-      </label>
+        <label>ユーザー名(空欄ならメールアドレスを使用)
+          <input type="text" name="user" />
+        </label>
 
-      <label>パスワード *
-        <input type="password" name="password" required />
-      </label>
+        <label>パスワード *
+          <input type="password" name="password" required />
+        </label>
+      </div>
 
       <p class="hint" id="preset-hint"></p>
 
       <div class="dialog-actions">
         <button type="button" class="btn" id="cancel-btn">キャンセル</button>
-        <button type="submit" class="btn btn-primary">追加</button>
+        <button type="submit" class="btn btn-primary" id="submit-btn">追加</button>
       </div>
       <p class="error hidden" id="add-error"></p>
     </form>

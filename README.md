@@ -37,10 +37,30 @@ npm start
 | プロバイダ | IMAP サーバー | 備考 |
 |---|---|---|
 | Gmail | `imap.gmail.com:993` | アプリパスワード必須 |
-| Outlook / Hotmail | `outlook.office365.com:993` | アプリパスワードが必要な場合あり |
+| Outlook / Hotmail | `outlook.office365.com:993` | **パスワード不可。OAuth 連携が必要**(下記参照) |
 | Yahoo!メール(日本) | `imap.mail.yahoo.co.jp:993` | 設定で IMAP アクセスを有効化 |
 | iCloud | `imap.mail.me.com:993` | アプリ用パスワード必須 |
 | その他 | プロバイダのドキュメント参照 | プリセット「カスタム」で入力 |
+
+### Outlook / Hotmail の場合(Microsoft OAuth)
+
+Microsoft は 2024年9月に個人向け Outlook アカウントの基本認証(パスワードでの IMAP ログイン)を廃止しました。アプリパスワードも同時に無効化されているため、**OAuth 2.0 での連携が唯一の方法**です。
+
+利用するには、Azure でアプリ登録を行い、環境変数 `MS_CLIENT_ID` / `MS_CLIENT_SECRET` を設定します。
+
+**Azure 側の設定:**
+
+1. https://portal.azure.com → 「Microsoft Entra ID」→「アプリの登録」→「新規登録」
+2. サポートされるアカウントの種類: **「任意の組織ディレクトリ内のアカウントと個人の Microsoft アカウント」**
+3. リダイレクト URI(Web): `https://<あなたのドメイン>/api/oauth/microsoft/callback`
+4. 「証明書とシークレット」→ クライアントシークレットを発行(値は発行時にしか表示されないので控える)
+5. 「API のアクセス許可」→ Microsoft Graph → 委任されたアクセス許可に以下を追加:
+   - `IMAP.AccessAsUser.All`
+   - `offline_access`
+
+設定後、アカウント追加ダイアログでプロバイダ「Outlook / Hotmail」を選ぶと「🔗 Microsoftアカウントで接続」ボタンが表示されます。Microsoft のログイン画面で認可すると、アカウントが自動で登録されます(パスワード入力は不要)。
+
+リフレッシュトークンは暗号化して保存され、アクセストークン(約1時間で失効)は自動更新されます。
 
 ## 設定
 
@@ -49,6 +69,8 @@ npm start
 - `PORT` — 待ち受けポート(デフォルト: 3000)
 - `MAILMANAGE_INVITE_CODE` — **ユーザー登録用の招待コード。インターネットに公開する場合は設定を強く推奨。** 設定すると、新規ユーザー登録時にこのコードの入力が必要になります(未設定だと誰でも登録できてしまいます)
 - `MAILMANAGE_SECRET` — パスワード暗号化キーの元になる秘密文字列。未設定の場合は初回起動時に `data/.key` が自動生成されます。コンテナ等でファイルが消える環境では必ず設定してください(消えると保存済みパスワードが復号できなくなります)
+- `MS_CLIENT_ID` / `MS_CLIENT_SECRET` — Outlook 連携(Microsoft OAuth)を使う場合に設定。未設定なら Outlook プリセットは無効化されます
+- `APP_BASE_URL` — OAuth のリダイレクト先を組み立てる際に使う公開URL(例: `https://mailmanage.onrender.com`)。未設定時はリクエストのホスト名から自動判定します
 
 データは `data/` に保存されます: ユーザーは `users.json`(パスワードは scrypt でハッシュ化)、メールアカウントは `accounts.json`(パスワードは AES-256-GCM で暗号化)。
 

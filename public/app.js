@@ -9,7 +9,8 @@ const PRESETS = {
   outlook: {
     host: 'outlook.office365.com',
     port: 993,
-    hint: 'Outlook.com はアプリパスワードが必要な場合があります。',
+    oauth: 'microsoft',
+    hint: '',
   },
   'yahoo-jp': {
     host: 'imap.mail.yahoo.co.jp',
@@ -32,6 +33,7 @@ const dialog = $('#add-dialog');
 const form = $('#add-form');
 
 let refreshTimer = null;
+let msOauthConfigured = false;
 
 // 401ならログインページへ飛ばす fetch ラッパー
 async function api(url, options) {
@@ -166,6 +168,19 @@ function applyPreset() {
     form.elements.host.value = preset.host;
     form.elements.port.value = preset.port;
   }
+  // Microsoft は OAuth 必須なので、パスワード入力欄ではなく連携ボタンを出す
+  const useOauth = Boolean(preset && preset.oauth === 'microsoft' && msOauthConfigured);
+  $('#ms-oauth-box').classList.toggle('hidden', !useOauth);
+  $('#password-fields').classList.toggle('hidden', useOauth);
+  form.elements.password.required = !useOauth;
+  form.elements.email.required = !useOauth;
+  form.elements.host.required = !useOauth;
+  $('#submit-btn').classList.toggle('hidden', useOauth);
+
+  if (preset && preset.oauth === 'microsoft' && !msOauthConfigured) {
+    $('#preset-hint').textContent =
+      'Outlook を使うにはサーバー側に Microsoft 連携の設定(MS_CLIENT_ID / MS_CLIENT_SECRET)が必要です。';
+  }
 }
 
 $('#preset').addEventListener('change', applyPreset);
@@ -219,15 +234,30 @@ logoutBtn.addEventListener('click', async () => {
   location.replace('/login.html');
 });
 
+// OAuth連携から戻ってきたときの結果表示
+function showOauthResult() {
+  const params = new URLSearchParams(location.search);
+  const oauth = params.get('oauth');
+  if (!oauth) return;
+  const noticeEl = $('#notice');
+  const ok = oauth === 'ok';
+  noticeEl.textContent = ok ? 'Microsoftアカウントを連携しました。' : `連携に失敗しました: ${oauth}`;
+  noticeEl.classList.remove('hidden');
+  noticeEl.classList.toggle('notice-error', !ok);
+  history.replaceState(null, '', location.pathname);
+}
+
 fetch('/api/auth')
   .then((r) => r.json())
-  .then(({ authenticated, username }) => {
+  .then(({ authenticated, username, msOauthConfigured: msOk }) => {
     if (!authenticated) {
       location.replace('/login.html');
       return;
     }
+    msOauthConfigured = Boolean(msOk);
     $('#username').textContent = `👤 ${username}`;
     logoutBtn.classList.remove('hidden');
+    showOauthResult();
     refresh();
   })
   .catch(() => location.replace('/login.html'));

@@ -287,3 +287,31 @@ dialog input, dialog select {
 
 .switch-link { font-size: 0.85rem; color: var(--muted); margin: 1.2rem 0 0; }
 .switch-link a { color: var(--accent); }
+
+/* OAuth 連携 */
+.oauth-box {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.9rem;
+  margin-bottom: 1rem;
+  background: var(--bg);
+}
+
+.oauth-box p { margin: 0 0 0.7rem; font-size: 0.82rem; color: var(--muted); }
+
+a.btn { display: inline-block; text-align: center; text-decoration: none; }
+a.btn.btn-block { display: block; }
+
+.notice {
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+  color: var(--ok);
+}
+
+.notice-error {
+  background: color-mix(in srgb, var(--unseen) 12%, transparent);
+  color: var(--unseen);
+}

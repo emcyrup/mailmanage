@@ -6,6 +6,7 @@ const store = require('./lib/store');
 const imap = require('./lib/imap');
 const auth = require('./lib/auth');
 const users = require('./lib/users');
+const msoauth = require('./lib/msoauth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -38,7 +39,43 @@ app.get('/api/auth', (req, res) => {
     username: user ? user.username : null,
     hasUsers: users.hasUsers(),
     inviteRequired: auth.inviteRequired(),
+    msOauthConfigured: msoauth.configured(),
   });
+});
+
+// ---- Microsoft OAuth(Outlook連携) ----
+
+app.get('/api/oauth/microsoft/start', (req, res) => {
+  const user = auth.currentUser(req);
+  if (!user) return res.redirect('/login.html');
+  if (!msoauth.configured()) {
+    return res.status(400).send('Microsoft連携は未設定です(MS_CLIENT_ID / MS_CLIENT_SECRET が必要)');
+  }
+  res.redirect(msoauth.buildAuthUrl(req, msoauth.createState(user.id)));
+});
+
+app.get('/api/oauth/microsoft/callback', async (req, res) => {
+  const { code, state, error, error_description: errorDescription } = req.query;
+  const uid = msoauth.verifyState(state);
+  if (!uid) return res.redirect('/?oauth=' + encodeURIComponent('認証セッションが無効です。もう一度お試しください'));
+  if (error || !code) {
+    return res.redirect('/?oauth=' + encodeURIComponent(errorDescription || error || '認証がキャンセルされました'));
+  }
+  try {
+    const { email, refreshToken } = await msoauth.exchangeCode(req, code);
+    store.addAccount(uid, {
+      label: `${email} (Microsoft)`,
+      email,
+      host: 'outlook.office365.com',
+      port: 993,
+      user: email,
+      password: refreshToken,
+      authType: 'ms-oauth',
+    });
+    res.redirect('/?oauth=ok');
+  } catch (err) {
+    res.redirect('/?oauth=' + encodeURIComponent(err.message));
+  }
 });
 
 app.post('/api/signup', auth.rateLimit, (req, res) => {
@@ -98,21 +135,34 @@ app.put('/api/accounts/:id', auth.requireAuth, (req, res) => {
 app.delete('/api/accounts/:id', auth.requireAuth, (req, res) => {
   const ok = store.deleteAccount(req.user.id, req.params.id);
   if (!ok) return res.status(404).json({ error: 'アカウントが見つかりません' });
+  msoauth.dropCache(req.params.id);
   res.status(204).end();
 });
 
 // ---- 受信箱の状態チェック(要ログイン・自分のアカウントのみ) ----
 
+// OAuth アカウントは接続前にアクセストークンを取得する。
+// 失敗しても他のアカウントのチェックは続行できるよう tokenError に記録する。
+async function resolveAuth(account) {
+  if (account.authType !== 'ms-oauth') return account;
+  try {
+    return { ...account, accessToken: await msoauth.getAccessToken(account) };
+  } catch (err) {
+    return { ...account, tokenError: `Microsoft認証の更新に失敗しました: ${err.message}(再連携が必要です)` };
+  }
+}
+
 app.get('/api/status', auth.requireAuth, async (req, res) => {
-  const accounts = store.listAccountsWithPassword(req.user.id);
+  const accounts = await Promise.all(store.listAccountsWithPassword(req.user.id).map(resolveAuth));
   const results = await imap.checkAll(accounts);
   res.json(results);
 });
 
 app.get('/api/status/:id', auth.requireAuth, async (req, res) => {
-  const account = store.getAccountWithPassword(req.user.id, req.params.id);
-  if (!account) return res.status(404).json({ error: 'アカウントが見つかりません' });
-  const { password, ...safe } = account;
+  const stored = store.getAccountWithPassword(req.user.id, req.params.id);
+  if (!stored) return res.status(404).json({ error: 'アカウントが見つかりません' });
+  const account = await resolveAuth(stored);
+  const { password, accessToken, ...safe } = account;
   const result = await imap.checkInbox(account);
   res.json({ account: safe, ...result });
 });
