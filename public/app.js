@@ -221,12 +221,13 @@ logoutBtn.addEventListener('click', async () => {
 
 fetch('/api/auth')
   .then((r) => r.json())
-  .then(({ enabled, authenticated }) => {
-    if (enabled && !authenticated) {
+  .then(({ authenticated, username }) => {
+    if (!authenticated) {
       location.replace('/login.html');
       return;
     }
-    if (enabled) logoutBtn.classList.remove('hidden');
+    $('#username').textContent = `👤 ${username}`;
+    logoutBtn.classList.remove('hidden');
     refresh();
   })
-  .catch(() => refresh());
+  .catch(() => location.replace('/login.html'));

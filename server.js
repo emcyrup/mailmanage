@@ -5,6 +5,7 @@ const express = require('express');
 const store = require('./lib/store');
 const imap = require('./lib/imap');
 const auth = require('./lib/auth');
+const users = require('./lib/users');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,19 +32,41 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ---- 認証 ----
 
 app.get('/api/auth', (req, res) => {
-  res.json({ enabled: auth.isEnabled(), authenticated: auth.isAuthenticated(req) });
+  const user = auth.currentUser(req);
+  res.json({
+    authenticated: Boolean(user),
+    username: user ? user.username : null,
+    hasUsers: users.hasUsers(),
+    inviteRequired: auth.inviteRequired(),
+  });
 });
 
-app.post('/api/login', auth.rateLimitLogin, (req, res) => {
-  if (!auth.isEnabled()) {
-    return res.status(400).json({ error: '認証は設定されていません' });
+app.post('/api/signup', auth.rateLimit, (req, res) => {
+  const { username, password, invite } = req.body || {};
+  if (!auth.verifyInvite(invite)) {
+    return res.status(403).json({ error: '招待コードが違います' });
   }
-  if (!auth.verifyPassword((req.body || {}).password)) {
-    return res.status(401).json({ error: 'パスワードが違います' });
+  const isFirstUser = !users.hasUsers();
+  const result = users.createUser(username, password);
+  if (result.error) {
+    return res.status(400).json({ error: result.error });
+  }
+  // 旧バージョン(ユーザー機能なし)のアカウントは最初のユーザーが引き継ぐ
+  if (isFirstUser) store.adoptOrphanAccounts(result.user.id);
+  auth.clearAttempts(req);
+  res.cookie(auth.COOKIE_NAME, auth.createToken(result.user.id), auth.cookieOptions(req));
+  res.status(201).json({ ok: true, username: result.user.username });
+});
+
+app.post('/api/login', auth.rateLimit, (req, res) => {
+  const { username, password } = req.body || {};
+  const user = users.authenticate(username, password);
+  if (!user) {
+    return res.status(401).json({ error: 'ユーザー名またはパスワードが違います' });
   }
   auth.clearAttempts(req);
-  res.cookie(auth.COOKIE_NAME, auth.createToken(), auth.cookieOptions(req));
-  res.json({ ok: true });
+  res.cookie(auth.COOKIE_NAME, auth.createToken(user.id), auth.cookieOptions(req));
+  res.json({ ok: true, username: user.username });
 });
 
 app.post('/api/logout', (req, res) => {
@@ -51,10 +74,10 @@ app.post('/api/logout', (req, res) => {
   res.json({ ok: true });
 });
 
-// ---- アカウント管理(要ログイン) ----
+// ---- アカウント管理(要ログイン・自分のアカウントのみ) ----
 
 app.get('/api/accounts', auth.requireAuth, (req, res) => {
-  res.json(store.listAccounts());
+  res.json(store.listAccounts(req.user.id));
 });
 
 app.post('/api/accounts', auth.requireAuth, (req, res) => {
@@ -62,32 +85,32 @@ app.post('/api/accounts', auth.requireAuth, (req, res) => {
   if (!email || !host || !password) {
     return res.status(400).json({ error: 'email, host, password は必須です' });
   }
-  const account = store.addAccount({ label, email, host, port, user, password });
+  const account = store.addAccount(req.user.id, { label, email, host, port, user, password });
   res.status(201).json(account);
 });
 
 app.put('/api/accounts/:id', auth.requireAuth, (req, res) => {
-  const updated = store.updateAccount(req.params.id, req.body || {});
+  const updated = store.updateAccount(req.user.id, req.params.id, req.body || {});
   if (!updated) return res.status(404).json({ error: 'アカウントが見つかりません' });
   res.json(updated);
 });
 
 app.delete('/api/accounts/:id', auth.requireAuth, (req, res) => {
-  const ok = store.deleteAccount(req.params.id);
+  const ok = store.deleteAccount(req.user.id, req.params.id);
   if (!ok) return res.status(404).json({ error: 'アカウントが見つかりません' });
   res.status(204).end();
 });
 
-// ---- 受信箱の状態チェック(要ログイン) ----
+// ---- 受信箱の状態チェック(要ログイン・自分のアカウントのみ) ----
 
 app.get('/api/status', auth.requireAuth, async (req, res) => {
-  const accounts = store.listAccountsWithPassword();
+  const accounts = store.listAccountsWithPassword(req.user.id);
   const results = await imap.checkAll(accounts);
   res.json(results);
 });
 
 app.get('/api/status/:id', auth.requireAuth, async (req, res) => {
-  const account = store.getAccountWithPassword(req.params.id);
+  const account = store.getAccountWithPassword(req.user.id, req.params.id);
   if (!account) return res.status(404).json({ error: 'アカウントが見つかりません' });
   const { password, ...safe } = account;
   const result = await imap.checkInbox(account);
@@ -96,10 +119,10 @@ app.get('/api/status/:id', auth.requireAuth, async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`mailmanage: http://localhost:${PORT} で起動しました`);
-  if (!auth.isEnabled()) {
+  if (!auth.inviteRequired()) {
     console.warn(
-      '警告: MAILMANAGE_PASSWORD が未設定のため認証なしで動作しています。' +
-        'インターネットに公開する場合は必ず設定してください。'
+      '注意: MAILMANAGE_INVITE_CODE が未設定のため、誰でもユーザー登録できます。' +
+        'インターネットに公開する場合は設定を推奨します。'
     );
   }
 });

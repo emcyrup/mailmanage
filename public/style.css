@@ -282,3 +282,8 @@ dialog input, dialog select {
 }
 
 .btn-block { width: 100%; }
+
+.username { font-size: 0.85rem; color: var(--muted); }
+
+.switch-link { font-size: 0.85rem; color: var(--muted); margin: 1.2rem 0 0; }
+.switch-link a { color: var(--accent); }
