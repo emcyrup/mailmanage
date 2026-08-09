@@ -58,6 +58,9 @@ Microsoft は 2024年9月に個人向け Outlook アカウントの基本認証(
    - `IMAP.AccessAsUser.All`
    - `offline_access`
 
+> **スコープの注意**: OAuth で要求するリソース識別子は `https://outlook.office.com/IMAP.AccessAsUser.All` です(`outlook.office365.com` ではありません)。IMAP の**接続先ホスト名**は `outlook.office365.com` で、こちらとは別物なので混同しないでください。誤ると `The provided resource value for the input parameter 'scope' is not valid.` というエラーになります。
+> Microsoft 側の仕様変更に備え、環境変数 `MS_SCOPES` でスコープ全体を上書きできます。
+
 設定後、アカウント追加ダイアログでプロバイダ「Outlook / Hotmail」を選ぶと「🔗 Microsoftアカウントで接続」ボタンが表示されます。Microsoft のログイン画面で認可すると、アカウントが自動で登録されます(パスワード入力は不要)。
 
 リフレッシュトークンは暗号化して保存され、アクセストークン(約1時間で失効)は自動更新されます。
@@ -71,6 +74,7 @@ Microsoft は 2024年9月に個人向け Outlook アカウントの基本認証(
 - `MAILMANAGE_SECRET` — パスワード暗号化キーの元になる秘密文字列。未設定の場合は初回起動時に `data/.key` が自動生成されます。コンテナ等でファイルが消える環境では必ず設定してください(消えると保存済みパスワードが復号できなくなります)
 - `MS_CLIENT_ID` / `MS_CLIENT_SECRET` — Outlook 連携(Microsoft OAuth)を使う場合に設定。未設定なら Outlook プリセットは無効化されます
 - `APP_BASE_URL` — OAuth のリダイレクト先を組み立てる際に使う公開URL(例: `https://mailmanage.onrender.com`)。未設定時はリクエストのホスト名から自動判定します
+- `MS_SCOPES` — Microsoft OAuth で要求するスコープの上書き(通常は設定不要)
 
 データは `data/` に保存されます: ユーザーは `users.json`(パスワードは scrypt でハッシュ化)、メールアカウントは `accounts.json`(パスワードは AES-256-GCM で暗号化)。
 
