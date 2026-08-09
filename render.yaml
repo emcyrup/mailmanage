@@ -7,6 +7,7 @@ services:
     plan: starter # ディスク永続化には有料プランが必要
     buildCommand: npm ci
     startCommand: node server.js
+    healthCheckPath: /login.html
     envVars:
       - key: MAILMANAGE_INVITE_CODE
         sync: false # ダッシュボードで手動設定
